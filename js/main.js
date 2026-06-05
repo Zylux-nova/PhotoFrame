@@ -1,125 +1,183 @@
-// 全局参数
-const cfg = {
-    scale: 90,
-    radius:33,
-    shadow:0.35,
-    frameW:20,
-    blur:8,
-    brand:'',
-    fontColor:'#ffffff',
-    logoSize:30,
-    bgImg:null,
-    srcImg:null,
-    batch:false
+
+const EXIF = {};
+(function(){function e(t){this.tags={},this.exif={},this.gps={},this.image={},this.thumbnail={},this.file=t}EXIF.getData=function(t,e){if(!t||!t.files||!t.files[0])return;let n=new FileReader;n.onload=function(){EXIF.readFromBinaryFile(new DataView(n.result),t,e)},n.readAsArrayBuffer(t.files[0])},EXIF.readFromBinaryFile=function(t,e){let n=new EXIF(t);n.parse(),e&&e(n)},EXIF.prototype.parse=function(){let t=this.tiffStart=this.findTag([0xffd8,0xffe1]),e=this.fileStart=t+4,n=new Uint8Array(this.file.buffer),r=n[e+2]*256+n[e+3];this.bigEndian=65534===r;let i=this.getShort(e+4);for(let o=0;o<i;o++){let s=e+6+12*o,a=this.getShort(s);switch(a){case271:this.image.Make=this.getString(s+8);break;case272:this.image.Model=this.getString(s+8);break;case33434:this.exif.FNumber=this.getRational(s+8);break;case33437:this.exif.FocalLength=this.getRational(s+8);break;case34850:this.exif.ISOSpeedRatings=this.getShort(s+8);break;case33439:this.exif.ExposureTime=this.getRational(s+8);break;case306:this.image.DateTime=this.getString(s+8);break;case34665:let l=this.getLong(s+8);this.parseEXIF(e+l);break;case34853:let d=this.getLong(s+8);this.parseGPS(e+d)}}},EXIF.prototype.getShort=function(t){return this.bigEndian?this.file.getUint16(t):this.file.getUint16(t,!0)},EXIF.prototype.getLong=function(t){return this.bigEndian?this.file.getUint32(t):this.file.getUint32(t,!0)},EXIF.prototype.getRational=function(t){let e=this.getLong(t),n=this.getLong(t+4);return n===0?0:e/n},EXIF.prototype.getString=function(t){let e=[];for(;;){let n=this.file.getUint8(t++);if(0===n)break;e.push(String.fromCharCode(n))}return e.join("")},EXIF.prototype.findTag=function(t){for(let e=0;e<this.file.byteLength-1;e++){let n=this.file.getUint8(e)*256+this.file.getUint8(e+1);for(let r=0;r<t.length;r++)if(t[r]===n)return e}return-1},EXIF.prototype.parseEXIF=function(t){let e=this.getShort(t+4);for(let n=0;n<e;n++){let r=t+6+12*n,i=this.getShort(r);switch(i){case33434:this.exif.FNumber=this.getRational(r+8);break;case33437:this.exif.FocalLength=this.getRational(r+8);break;case34850:this.exif.ISOSpeedRatings=this.getShort(r+8);break;case33439:this.exif.ExposureTime=this.getRational(r+8);break;case306:this.exif.DateTime=this.getString(r+8);break}}},EXIF.prototype.parseGPS=function(t){let e=this.getShort(t+4);for(let n=0;n<e;n++){let r=t+6+12*n,i=this.getShort(r);this.gps[i]=this.getRational(r+8)}}})();
+
+
+const config = {
+    srcImg: null,
+    bgCustom: null,
+    bgMode: "origin",
+    scale:90,
+    radius:20,
+    shadow:0.5,
+    frameW:80,
+    blur:40,
+    brandText:"",
+    fontColor:"#ffffff",
+    logoSize:35,
+    batch:false,
+    useExif:true,
+    exifStr:"",
+    make:"",model:""
 }
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
+const emptyTip = document.getElementById('emptyTip');
+const exifTip = document.getElementById('exifTip');
 
-// 原图上传
-document.getElementById('imgInput').onchange = async(e)=>{
+
+document.getElementById('imgInput').onchange = async e=>{
     const file = e.target.files[0];
     if(!file)return;
-    cfg.srcImg = await loadImg(file);
-    renderFrame();
+    document.getElementById('fileName').innerText = file.name;
+    config.srcImg = await loadImg(file);
+    emptyTip.style.display = 'none';
+    canvas.style.display = 'block';
+
+
+    EXIF.getData({files:[file]},ex=>{
+        let mk = ex.image.Make||"";
+        let md = ex.image.Model||"";
+        let f = ex.exif.FNumber||"";
+        let iso = ex.exif.ISOSpeedRatings||"";
+        let s = ex.exif.ExposureTime||"";
+        let fl = ex.exif.FocalLength||"";
+        config.make = mk;config.model = md;
+        let infoArr=[];
+        if(mk)infoArr.push(mk.trim());
+        if(md)infoArr.push(md.trim());
+        if(f)infoArr.push(`f/${f}`);
+        if(s)infoArr.push(`${s}s`);
+        if(iso)infoArr.push(`ISO${iso}`);
+        if(fl)infoArr.push(`${fl}mm`);
+        config.exifStr = infoArr.join(" | ");
+        exifTip.innerText = config.exifStr||"无EXIF参数";
+        render();
+    })
+    render();
 }
-// 相框背景图
-document.getElementById('bgInput').onchange = async(e)=>{
+
+document.getElementById('customBgInput').onchange = async e=>{
     const f = e.target.files[0];
     if(!f)return;
-    cfg.bgImg = await loadImg(f);
-    renderFrame();
+    config.bgCustom = await loadImg(f);
+    render();
 }
-// 批量勾选
-document.getElementById('batchCheck').onchange = e=>cfg.batch = e.target.checked;
 
-// 滑块绑定
+document.getElementById('batchCheck').onchange = e=>{
+    config.batch = e.target.checked;
+    e.target.previousElementSibling.innerText = config.batch?"批量开启":"批量关闭";
+}
+
+document.getElementById('useExif').onchange=e=>{
+    config.useExif = e.target.checked;render();
+}
+
+document.querySelectorAll('.mode-btn').forEach(btn=>{
+    btn.onclick=()=>{
+        document.querySelectorAll('.mode-btn').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        config.bgMode = btn.dataset.val;
+        if(config.bgMode==='custom') document.getElementById('customBgInput').click();
+        render();
+    }
+})
+
+document.querySelectorAll('.tab-btn').forEach((b,i)=>{
+    b.onclick=()=>{
+        document.querySelectorAll('.tab-btn').forEach(x=>x.classList.remove('active'));
+        b.classList.add('active');
+        config.fontColor = i===0?"#fff":"#000";render();
+    }
+})
+
+document.querySelectorAll('.brand').forEach(b=>{
+    b.onclick=()=>{config.brandText = b.innerText;render();}
+})
+
+
+bindSlider('blur','blurVal','blur');
+bindSlider('frameW','frameWVal','frameW');
 bindSlider('scale','scaleVal','scale');
 bindSlider('radius','radiusVal','radius');
 bindSlider('shadow','shadowVal','shadow',v=>v/100);
-bindSlider('frameW','frameWVal','frameW');
-bindSlider('blur','blurVal','blur');
 bindSlider('logoSize','logoSizeVal','logoSize');
 
-// 品牌点击
-document.querySelectorAll('.brand-btn').forEach(btn=>{
-    btn.onclick = ()=>{cfg.brand = btn.textContent;renderFrame()}
-})
-// 字体颜色
-document.querySelectorAll('input[name=fontColor]').forEach(r=>{
-    r.onchange=()=>{cfg.fontColor=r.value;renderFrame()}
-})
 
-// 下载图片
-document.getElementById('downBtn').onclick = ()=>{
+document.getElementById('downloadBtn').onclick = ()=>{
     const a = document.createElement('a');
-    a.download='相框成品.png';
-    a.href=canvas.toDataURL('image/png');
+    a.href = canvas.toDataURL('image/png');
+    a.download = '相框成品.png';
     a.click();
 }
 
-// 加载图片工具
+
 function loadImg(file){
     return new Promise(res=>{
-        const i = new Image();
-        i.src=URL.createObjectURL(file);
-        i.onload=()=>res(i);
+        const img = new Image();
+        img.src = URL.createObjectURL(file);
+        img.onload = ()=>res(img);
     })
 }
-// 滑块通用绑定
-function bindSlider(id,valId,cfgKey,trans=v=>+v){
+function bindSlider(id,showId,key,trans=v=>+v){
     const dom = document.getElementById(id);
-    const valDom = document.getElementById(valId);
+    const show = document.getElementById(showId);
     dom.oninput = ()=>{
-        const v = trans(dom.value);
-        cfg[cfgKey]=v;
-        valDom.textContent = dom.value + (id=='scale'?'%':id=='frameW'?'%':'px');
-        renderFrame();
+        let val = trans(dom.value);
+        config[key]=val;
+        show.innerText = dom.value + (['scale'].includes(key)?'%':'px');
+        render();
     }
 }
 
-// 核心绘制相框
-function renderFrame(){
-    if(!cfg.srcImg) return;
-    const ori = cfg.srcImg;
-    // 相框总宽高
-    const fwRate = cfg.frameW/100;
-    const totalW = ori.width*(1+fwRate*2);
-    const totalH = ori.height*(1+fwRate*2);
-    canvas.width=totalW;canvas.height=totalH;
 
-    // 绘制背景：自定义图/原图模糊
-    if(cfg.bgImg){
-        ctx.drawImage(cfg.bgImg,0,0,totalW,totalH);
+function render(){
+    if(!config.srcImg)return;
+    const img = config.srcImg;
+    const pad = config.frameW;
+    const totalW = img.width + pad*2;
+    const totalH = img.height + pad*2;
+    canvas.width = totalW; canvas.height = totalH;
+    ctx.clearRect(0,0,totalW,totalH);
+
+
+    if(config.bgMode==='none'){
+        ctx.fillStyle="#000";ctx.fillRect(0,0,totalW,totalH);
+    }else if(config.bgMode==='custom'&&config.bgCustom){
+        ctx.drawImage(config.bgCustom,0,0,totalW,totalH);
     }else{
-        ctx.drawImage(ori,0,0,totalW,totalH);
+        ctx.drawImage(img,0,0,totalW,totalH);
     }
-    // 高斯模糊
-    ctx.filter = `blur(${cfg.blur}px)`;
+    ctx.filter = `blur(${config.blur}px)`;
     ctx.drawImage(canvas,0,0);
-    ctx.filter='none';
+    ctx.filter = 'none';
 
-    // 绘制中间原图
-    const sRate = cfg.scale/100;
-    const w = ori.width*sRate;
-    const h = ori.height*sRate;
-    const x = (totalW - w)/2;
-    const y = (totalH - h)/2;
 
-    // 阴影立体
-    ctx.shadowColor='rgba(0,0,0,'+cfg.shadow+')';
-    ctx.shadowBlur=15;
+    const s = config.scale/100;
+    const w = img.width*s;
+    const h = img.height*s;
+    const x = (totalW-w)/2;
+    const y = (totalH-h)/2;
+    ctx.shadowColor = `rgba(0,0,0,${config.shadow})`;
+    ctx.shadowBlur=16;
     ctx.beginPath();
-    ctx.roundRect(x,y,w,h,cfg.radius);
+    ctx.roundRect(x,y,w,h,config.radius);
     ctx.clip();
-    ctx.drawImage(ori,x,y,w,h);
+    ctx.drawImage(img,x,y,w,h);
     ctx.closePath();
     ctx.shadowBlur=0;
 
-    // 底部品牌文字
-    if(cfg.brand){
-        ctx.fillStyle=cfg.fontColor;
-        ctx.font=`bold ${cfg.logoSize}px sans-serif`;
-        ctx.textAlign='center';
-        ctx.fillText(cfg.brand.toUpperCase(),totalW/2, totalH-fwRate*ori.height/2);
+
+    ctx.fillStyle=config.fontColor;
+    ctx.font=`bold ${config.logoSize}px sans-serif`;
+    ctx.textAlign='center';
+    let bottomText = "";
+    if(config.useExif&&config.exifStr){
+        bottomText = config.exifStr;
+    }else if(config.brandText){
+        bottomText = config.brandText;
+    }
+    if(bottomText){
+        ctx.fillText(bottomText,totalW/2, totalH-pad/2);
     }
 }
