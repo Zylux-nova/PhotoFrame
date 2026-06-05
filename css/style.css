@@ -27,6 +27,12 @@ input[type="range"]{width:100%;accent-color:#257bff;}
 .font-opt{margin:8px 0;font-size:13px;}
 .exif-info{margin-top:10px;padding:8px;background:#2c2c2c;font-size:12px;color:#aaa;border-radius:4px;}
 
+/*自定义EXIF样式*/
+.custom-exif-box{margin-top:12px;}
+.custom-exif-box p{font-size:13px;color:#ccc;margin-bottom:6px;}
+.exif-input{width:100%;background:#2c2c2c;border:1px solid #444;color:#fff;padding:5px 6px;margin-bottom:5px;border-radius:3px;outline:none;}
+.exif-check{margin-top:6px;font-size:13px;}
+
 .down-btn{width:100%;padding:11px;background:#257bff;border:none;color:#fff;border-radius:5px;font-size:15px;margin-top:10px;cursor:pointer;}
 
 .preview-box{flex:1;display:flex;align-items:center;justify-content:center;background:#171717;}
