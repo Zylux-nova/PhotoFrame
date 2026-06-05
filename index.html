@@ -17,7 +17,7 @@
             <h3>1.图像源</h3>
             <div class="btn-row">
                 <label class="file-btn">选择照片
-                    <input type="file" id="imgInput" accept="image/*" multiple hidden>
+                    <input type="file" id="imgInput" accept="image/jpeg,image/png" multiple hidden>
                 </label>
                 <span id="fileName">未选择文件</span>
             </div>
@@ -34,7 +34,7 @@
                     <button class="mode-btn" data-val="custom">自定义底图</button>
                     <button class="mode-btn" data-val="none">纯黑背景</button>
                 </div>
-                <input type="file" id="customBgInput" accept="image/*" hidden>
+                <input type="file" id="customBgInput" accept="image/jpeg,image/png" hidden>
             </div>
         </div>
 
@@ -78,7 +78,7 @@
             </div>
         </div>
 
-        <!-- 3.品牌&EXIF参数（新增EXIF） -->
+        <!-- 3.品牌&EXIF参数（新增手动自定义EXIF） -->
         <div class="panel-block">
             <h3>3.相机品牌与照片参数</h3>
             <div class="brand-tab">
@@ -107,6 +107,18 @@
                 </div>
                 <input type="range" id="logoSize" min="15" max="70" value="35">
             </div>
+
+            <!-- 自定义EXIF输入区 -->
+            <div class="custom-exif-box">
+                <p>手动自定义EXIF（EXIF丢失时使用）</p>
+                <input class="exif-input" id="inMake" placeholder="相机品牌：Canon">
+                <input class="exif-input" id="inModel" placeholder="机型：EOS R5">
+                <input class="exif-input" id="inParam" placeholder="参数：f/1.8 | 1/125s | ISO100 | 50mm">
+                <div class="exif-check">
+                    <input type="checkbox" id="useCustomExif">使用自定义参数（优先覆盖自动EXIF）
+                </div>
+            </div>
+
             <div class="exif-info" id="exifTip">
                 EXIF：等待上传图片自动识别
             </div>
