@@ -7,80 +7,121 @@
     <link rel="stylesheet" href="./css/style.css">
 </head>
 <body>
-<div class="container">
-    <div class="left-panel">
-        <h3>📷 相框参数设置</h3>
-        <!-- 图片上传 -->
-        <div class="item">
-            <label>上传原图：</label>
-            <input type="file" id="imgInput" accept="image/*" multiple>
-            <div class="batch-box">
-                <input type="checkbox" id="batchCheck"> <label>批量处理</label>
+<div class="wrap">
+    <!-- 左侧控制面板 -->
+    <div class="left-sidebar">
+        <h1 class="title">PhotoFrame</h1>
+
+        <!-- 1.图像源区域 -->
+        <div class="panel-block">
+            <h3>1.图像源</h3>
+            <div class="btn-row">
+                <label class="file-btn">选择照片
+                    <input type="file" id="imgInput" accept="image/*" multiple hidden>
+                </label>
+                <span id="fileName">未选择文件</span>
+            </div>
+            <div class="batch-switch">
+                <span>批量关闭</span>
+                <input type="checkbox" id="batchCheck">
+                <span>批量开启</span>
+            </div>
+
+            <div class="bg-mode">
+                <p>相框背景</p>
+                <div class="mode-btn-group">
+                    <button class="mode-btn active" data-val="origin">原图模糊</button>
+                    <button class="mode-btn" data-val="custom">自定义底图</button>
+                    <button class="mode-btn" data-val="none">纯黑背景</button>
+                </div>
+                <input type="file" id="customBgInput" accept="image/*" hidden>
             </div>
         </div>
-        <!-- 背景图上传（相框背景） -->
-        <div class="item">
-            <label>相框自定义背景图：</label>
-            <input type="file" id="bgInput" accept="image/*">
+
+        <!-- 2.相框参数 -->
+        <div class="panel-block">
+            <h3>2.相框样式设置</h3>
+            <div class="slider-item">
+                <div class="slider-info">
+                    <span>背景模糊强度</span>
+                    <span id="blurVal">40px</span>
+                </div>
+                <input type="range" id="blur" min="0" max="80" value="40">
+            </div>
+            <div class="slider-item">
+                <div class="slider-info">
+                    <span>相框边框宽度</span>
+                    <span id="frameWVal">80px</span>
+                </div>
+                <input type="range" id="frameW" min="10" max="150" value="80">
+            </div>
+            <div class="slider-item">
+                <div class="slider-info">
+                    <span>原图缩放比例</span>
+                    <span id="scaleVal">90%</span>
+                </div>
+                <input type="range" id="scale" min="30" max="100" value="90">
+            </div>
+            <div class="slider-item">
+                <div class="slider-info">
+                    <span>图片圆角</span>
+                    <span id="radiusVal">20px</span>
+                </div>
+                <input type="range" id="radius" min="0" max="60" value="20">
+            </div>
+            <div class="slider-item">
+                <div class="slider-info">
+                    <span>立体阴影深度</span>
+                    <span id="shadowVal">0.5</span>
+                </div>
+                <input type="range" id="shadow" min="0" max="100" value="50">
+            </div>
         </div>
 
-        <!-- 原图设置 -->
-        <div class="item">
-            <p>原图缩放：<span id="scaleVal">90%</span></p>
-            <input type="range" id="scale" min="10" max="100" value="90">
-        </div>
-        <div class="item">
-            <p>圆角大小：<span id="radiusVal">33px</span></p>
-            <input type="range" id="radius" min="0" max="80" value="33">
-        </div>
-        <div class="item">
-            <p>立体阴影：<span id="shadowVal">0.35</span></p>
-            <input type="range" id="shadow" min="0" max="100" value="35">
-        </div>
-
-        <!-- 相框背景设置 -->
-        <div class="item">
-            <p>相框宽度：<span id="frameWVal">20%</span></p>
-            <input type="range" id="frameW" min="5" max="50" value="20">
-        </div>
-        <div class="item">
-            <p>背景模糊度：<span id="blurVal">8px</span></p>
-            <input type="range" id="blur" min="0" max="30" value="8">
-        </div>
-
-        <!-- 相机品牌区域 -->
-        <div class="item brand-area">
-            <p>相机品牌（底部水印）</p>
+        <!-- 3.品牌&EXIF参数（新增EXIF） -->
+        <div class="panel-block">
+            <h3>3.相机品牌与照片参数</h3>
             <div class="brand-tab">
-                <button class="theme-btn" data-type="light">浅色</button>
-                <button class="theme-btn" data-type="dark">深色</button>
+                <button class="tab-btn active">白色文字</button>
+                <button class="tab-btn">黑色文字</button>
             </div>
-            <div class="brand-list">
-                <button class="brand-btn">Sony</button>
-                <button class="brand-btn">Nikon</button>
-                <button class="brand-btn">Canon</button>
-                <button class="brand-btn">Fujifilm</button>
-                <button class="brand-btn">Leica</button>
-                <button class="brand-btn">DJI</button>
-                <button class="brand-btn">Olympus</button>
-                <button class="brand-btn">Panasonic</button>
-                <button class="brand-btn">Ricoh</button>
+            <div class="brand-grid">
+                <button class="brand" data-logo="sony">Sony</button>
+                <button class="brand" data-logo="nikon">Nikon</button>
+                <button class="brand" data-logo="canon">Canon</button>
+                <button class="brand" data-logo="fuji">Fujifilm</button>
+                <button class="brand" data-logo="leica">Leica</button>
+                <button class="brand" data-logo="dji">DJI</button>
+                <button class="brand" data-logo="oly">Olympus</button>
+                <button class="brand" data-logo="pan">Panasonic</button>
+                <button class="brand" data-logo="ricoh">Ricoh</button>
             </div>
-            <div class="font-set">
-                <label>文字颜色：</label>
-                <input type="radio" name="fontColor" value="#fff" checked>白字
-                <input type="radio" name="fontColor" value="#000">黑字
+            <div class="font-opt">
+                <label>自动读取EXIF参数：</label>
+                <input type="checkbox" id="useExif" checked>启用
             </div>
-            <div class="logo-opt">
-                <p>Logo大小:<span id="logoSizeVal">30px</span></p>
-                <input type="range" id="logoSize" min="10" max="80" value="30">
+            <div class="slider-item">
+                <div class="slider-info">
+                    <span>品牌/参数字号</span>
+                    <span id="logoSizeVal">35px</span>
+                </div>
+                <input type="range" id="logoSize" min="15" max="70" value="35">
+            </div>
+            <div class="exif-info" id="exifTip">
+                EXIF：等待上传图片自动识别
             </div>
         </div>
 
-        <button id="downBtn" class="down">下载成品图片</button>
+        <!-- 导出 -->
+        <button id="downloadBtn" class="down-btn">导出高清PNG图片</button>
     </div>
 
-    <div class="right-preview">
+    <!-- 右侧预览画布 -->
+    <div class="preview-box">
+        <div id="emptyTip">
+            <div class="icon-cam">📷</div>
+            <p>点击左侧选择照片开始制作相框</p>
+        </div>
         <canvas id="canvas"></canvas>
     </div>
 </div>
