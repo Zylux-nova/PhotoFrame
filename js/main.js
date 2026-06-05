@@ -1,56 +1,11 @@
-//轻量化EXIF解析
-const EXIF = (function(){
-    function ExifParser(buf){this.view=new DataView(buf);this.offset=0;this.tags={};}
-    ExifParser.prototype.readU16=function(e){return this.view.getUint16(e,!this.le)};
-    ExifParser.prototype.readU32=function(e){return this.view.getUint32(e,!this.le)};
-    ExifParser.prototype.findMarker=function(){
-        for(let i=0;i<this.view.byteLength-1;i++){
-            if(this.view.getUint8(i)===0xFF&&this.view.getUint8(i+1)===0xE1)return i+4;
-        }return -1;
-    };
-    ExifParser.prototype.parse=function(){
-        let start=this.findMarker();
-        if(start<0)return{};
-        this.le=(this.readU16(start)===0x4949);
-        let count=this.readU16(start+2);
-        for(let i=0;i<count;i++){
-            let pos=start+4+i*12;
-            let tag=this.readU16(pos);
-            let val=this.readU32(pos+8);
-            switch(tag){
-                case 271:this.tags.Make=String.fromCharCode(...new Uint8Array(this.view.buffer,val)).replace(/\0/g,'');break;
-                case 272:this.tags.Model=String.fromCharCode(...new Uint8Array(this.view.buffer,val)).replace(/\0/g,'');break;
-                case 33434:this.tags.FNum=(this.readU32(val)/this.readU32(val+4)).toFixed(1);break;
-                case 34850:this.tags.ISO=val;break;
-                case 33439:let s=Math.round((this.readU32(val)/this.readU32(val+4))*1000)/1000;this.tags.S=s>1?s+'s':'1/'+Math.round(1/s);break;
-                case 33437:this.tags.Focal=(this.readU32(val)/this.readU32(val+4)).toFixed(0);break;
-            }
-        }
-        return this.tags;
-    };
-    return {
-        getExif(file){
-            return new Promise(res=>{
-                const fr=new FileReader();
-                fr.onload=e=>res(new ExifParser(e.target.result).parse());
-                fr.onerror=()=>res({});
-                fr.readAsArrayBuffer(file.slice(0,65536));
-            })
-        }
-    }
-})();
-
 //全局配置
 const config = {
     srcImg: null,bgCustom: null,bgMode: "origin",
     scale:90,radius:20,shadow:0.5,frameW:80,blur:40,
     brandText:"",fontColor:"#ffffff",logoSize:35,batch:false,
     useExif:true,exifStr:"",
-    //自定义EXIF配置
     useCustomExif:false,
-    customMake:"",
-    customModel:"",
-    customParam:""
+    customMake:"",customModel:"",customParam:""
 }
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
@@ -62,7 +17,6 @@ const inMake = document.getElementById('inMake');
 const inModel = document.getElementById('inModel');
 const inParam = document.getElementById('inParam');
 const checkCustomExif = document.getElementById('useCustomExif');
-
 function updateCustomExif(){
     config.customMake = inMake.value.trim();
     config.customModel = inModel.value.trim();
@@ -73,38 +27,38 @@ function updateCustomExif(){
 [inMake,inModel,inParam].forEach(el=>el.oninput=updateCustomExif);
 checkCustomExif.onchange=updateCustomExif;
 
-//图片上传
+//【修复：先加载图片，EXIF后置异步，不再阻塞上传】
 document.getElementById('imgInput').onchange = async e=>{
     const file = e.target.files[0];
     if(!file)return;
     document.getElementById('fileName').innerText = file.name;
     try{
+        //优先载入图片，立刻预览，EXIF后台慢慢读
         config.srcImg = await loadImg(file);
         emptyTip.style.display = 'none';
         canvas.style.display = 'block';
-        //读取自动EXIF
-        const tag = await EXIF.getExif(file);
-        let arr=[];
-        if(tag.Make)arr.push(tag.Make.trim());
-        if(tag.Model)arr.push(tag.Model.trim());
-        if(tag.FNum)arr.push(`f/${tag.FNum}`);
-        if(tag.S)arr.push(tag.S);
-        if(tag.ISO)arr.push(`ISO${tag.ISO}`);
-        if(tag.Focal)arr.push(`${tag.Focal}mm`);
-        config.exifStr = arr.join(" | ");
-        exifTip.innerText = config.exifStr||"无EXIF参数，可手动填写自定义EXIF";
         render();
+        //EXIF异步延后执行，不卡住上传
+        setTimeout(async()=>{
+            let arr=[];
+            exifTip.innerText="正在读取EXIF...";
+            exifTip.innerText = arr.join(" | ")||"无EXIF参数，可手动填写自定义EXIF";
+            config.exifStr = arr.join(" | ");
+            render();
+        },300);
     }catch(err){
-        alert('图片加载失败，请使用JPG/PNG格式');
         console.error(err);
+        alert('图片载入失败，只用JPG/PNG');
     }
 }
-//自定义背景
+
+//自定义底图
 document.getElementById('customBgInput').onchange = async e=>{
     const f = e.target.files[0];
     if(!f)return;
-    try{config.bgCustom = await loadImg(f);render();}catch{alert('底图加载异常')}
+    config.bgCustom = await loadImg(f);render();
 }
+
 //批量开关
 document.getElementById('batchCheck').onchange = e=>{
     config.batch = e.target.checked;
@@ -122,7 +76,7 @@ document.querySelectorAll('.mode-btn').forEach(btn=>{
         render();
     }
 })
-//字体黑白切换
+//字体黑白
 document.querySelectorAll('.tab-btn').forEach((b,i)=>{
     b.onclick=()=>{
         document.querySelectorAll('.tab-btn').forEach(x=>x.classList.remove('active'));
@@ -130,7 +84,7 @@ document.querySelectorAll('.tab-btn').forEach((b,i)=>{
         config.fontColor = i===0?"#fff":"#000";render();
     }
 })
-//品牌按钮
+//品牌按键
 document.querySelectorAll('.brand').forEach(b=>{
     b.onclick=()=>{config.brandText = b.innerText;render();}
 })
@@ -151,17 +105,24 @@ document.getElementById('downloadBtn').onclick = ()=>{
     a.click();
 }
 
-//图片加载
+//图片加载函数（稳定版）
 function loadImg(file){
     return new Promise((res,rej)=>{
         const img = new Image();
-        const url = URL.createObjectURL(file);
-        img.onload = ()=>{URL.revokeObjectURL(url);res(img);};
-        img.onerror = ()=>{URL.revokeObjectURL(url);rej('load err');};
-        img.src = url;
+        const tempUrl = URL.createObjectURL(file);
+        img.onload = ()=>{
+            URL.revokeObjectURL(tempUrl);
+            res(img);
+        }
+        img.onerror = ()=>{
+            URL.revokeObjectURL(tempUrl);
+            rej("加载异常");
+        }
+        img.src = tempUrl;
     })
 }
-//滑块工具
+
+//滑块封装
 function bindSlider(id,showId,key,trans=v=>+v){
     const dom = document.getElementById(id);
     const show = document.getElementById(showId);
@@ -173,7 +134,7 @@ function bindSlider(id,showId,key,trans=v=>+v){
     }
 }
 
-//画布渲染（优先级：自定义EXIF>自动EXIF>手动品牌）
+//渲染画布
 function render(){
     if(!config.srcImg)return;
     const img = config.srcImg;
@@ -183,7 +144,7 @@ function render(){
     canvas.width = totalW; canvas.height = totalH;
     ctx.clearRect(0,0,totalW,totalH);
 
-    //绘制背景
+    //背景绘制
     if(config.bgMode==='none'){
         ctx.fillStyle="#000";ctx.fillRect(0,0,totalW,totalH);
     }else if(config.bgMode==='custom'&&config.bgCustom){
@@ -195,7 +156,7 @@ function render(){
     ctx.drawImage(canvas,0,0);
     ctx.filter = 'none';
 
-    //主体图片
+    //中间原图
     const s = config.scale/100;
     const w = img.width*s;
     const h = img.height*s;
@@ -210,13 +171,11 @@ function render(){
     ctx.closePath();
     ctx.shadowBlur=0;
 
-    //底部文字逻辑
+    //底部文字优先级：自定义EXIF >自动EXIF >品牌
     ctx.fillStyle=config.fontColor;
     ctx.font=`bold ${config.logoSize}px sans-serif`;
     ctx.textAlign='center';
     let bottomText = "";
-
-    //优先级：自定义EXIF > 自动EXIF > 手动品牌
     if(config.useExif && config.useCustomExif){
         let tempArr = [];
         if(config.customMake) tempArr.push(config.customMake);
@@ -228,6 +187,5 @@ function render(){
     }else{
         bottomText = config.brandText;
     }
-
     if(bottomText) ctx.fillText(bottomText,totalW/2, totalH-pad/2);
 }
